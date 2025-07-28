@@ -5,7 +5,7 @@ use App\Http\Controllers\IRCServerController;
 use App\Http\Controllers\IRCChatController;
 
 // Rutas para gestión de servidores IRC
-Route::middleware(['auth'])->group(function () {
+Route::prefix('irc')->middleware(['auth'])->group(function () {
     // Gestión de servidores IRC
     Route::get('/servers', [IRCServerController::class, 'index'])->name('irc-servers.index');
     Route::get('/servers/create', [IRCServerController::class, 'create'])->name('irc-servers.create');
@@ -13,10 +13,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/servers/{id}/edit', [IRCServerController::class, 'edit'])->name('irc-servers.edit');
     Route::put('/servers/{id}', [IRCServerController::class, 'update'])->name('irc-servers.update');
     Route::delete('/servers/{id}', [IRCServerController::class, 'destroy'])->name('irc-servers.destroy');
-    
-    // API para obtener lista de servidores
-    Route::get('/api/servers', [IRCServerController::class, 'list'])->name('irc-servers.list');
-    
+
     // Rutas para el chat IRC
     Route::get('/chat/{server}', [IRCChatController::class, 'show'])->name('irc-chat.show');
     Route::post('/chat/{server}/connect', [IRCChatController::class, 'connect'])->name('irc-chat.connect');
@@ -26,3 +23,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/chat/{server}/join-channel', [IRCChatController::class, 'joinChannel'])->name('irc-chat.join-channel');
     Route::post('/chat/{server}/leave-channel', [IRCChatController::class, 'leaveChannel'])->name('irc-chat.leave-channel');
 });
+
+// API para obtener lista de servidores (fuera del middleware de auth para AJAX)
+Route::get('/irc/api/servers', [IRCServerController::class, 'list'])->middleware('auth')->name('irc-servers.list');

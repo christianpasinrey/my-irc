@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\IRCServer;
 
 class IRCServerController extends Controller
 {
@@ -25,7 +26,7 @@ class IRCServerController extends Controller
             'port' => 'required|integer|min:1|max:65535',
         ]);
 
-        $server = new \App\Models\IRCServer();
+        $server = new IRCServer();
         $server->fill($request->all());
         $server->save();
 
@@ -34,7 +35,7 @@ class IRCServerController extends Controller
 
     public function edit($id)
     {
-        $server = \App\Models\IRCServer::findOrFail($id);
+        $server = IRCServer::findOrFail($id);
         return Inertia::render('IRC/Edit', ['server' => $server]);
     }
 
@@ -46,7 +47,7 @@ class IRCServerController extends Controller
             'port' => 'required|integer|min:1|max:65535',
         ]);
 
-        $server = \App\Models\IRCServer::findOrFail($id);
+        $server = IRCServer::findOrFail($id);
         $server->fill($request->all());
         $server->save();
 
@@ -55,7 +56,7 @@ class IRCServerController extends Controller
 
     public function destroy($id)
     {
-        $server = \App\Models\IRCServer::findOrFail($id);
+        $server = IRCServer::findOrFail($id);
         $server->delete();
 
         return redirect()->route('irc-servers.index')->with('success', 'Servidor IRC eliminado exitosamente.');
@@ -63,7 +64,7 @@ class IRCServerController extends Controller
 
     public function list()
     {
-        $servers = \App\Models\IRCServer::all();
+        $servers = IRCServer::all();
         return response()->json($servers);
     }
 }

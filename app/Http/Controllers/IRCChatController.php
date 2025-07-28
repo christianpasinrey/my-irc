@@ -85,7 +85,7 @@ class IRCChatController extends Controller
         ]);
 
         $connection = session('irc_connection_' . $server->id);
-        
+
         if (!$connection || !$connection['connected']) {
             return response()->json([
                 'success' => false,
@@ -148,7 +148,7 @@ class IRCChatController extends Controller
         ]);
 
         $connection = session('irc_connection_' . $server->id);
-        
+
         if (!$connection || !$connection['connected']) {
             return response()->json([
                 'success' => false,

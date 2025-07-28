@@ -19,7 +19,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <!-- Tarjetas principales de IRC -->
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
                 <!-- Gestión de Servidores -->
-                <Link href="/irc/servers" class="group relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-blue-500/10 to-blue-600/10 hover:from-blue-500/20 hover:to-blue-600/20 transition-all duration-200">
+                <Link :href="route('irc-servers.index')" class="group relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-blue-500/10 to-blue-600/10 hover:from-blue-500/20 hover:to-blue-600/20 transition-all duration-200">
                     <div class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                         <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                             <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -32,7 +32,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </Link>
 
                 <!-- Agregar Servidor -->
-                <Link href="/irc/servers/create" class="group relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-green-500/10 to-green-600/10 hover:from-green-500/20 hover:to-green-600/20 transition-all duration-200">
+                <Link :href="route('irc-servers.create')" class="group relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-green-500/10 to-green-600/10 hover:from-green-500/20 hover:to-green-600/20 transition-all duration-200">
                     <div class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                         <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                             <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

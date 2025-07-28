@@ -1,125 +1,132 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
-    <header class="bg-white shadow">
-      <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center">
-          <h1 class="text-3xl font-bold text-gray-900">Servidores IRC</h1>
-          <Link
-            :href="route('irc-servers.create')"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Agregar Servidor
-          </Link>
-        </div>
-      </div>
-    </header>
+    <AppLayout>
+        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+            <!-- Header con título y botón agregar -->
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-foreground">Servidores IRC</h1>
+                <Button 
+                    as-child
+                >
+                    <Link :href="route('irc-servers.create')">
+                        Agregar Servidor
+                    </Link>
+                </Button>
+            </div>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div class="px-4 py-6 sm:px-0">
-        <div v-if="servers.length === 0" class="text-center py-12">
-          <svg
-            class="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No hay servidores IRC</h3>
-          <p class="mt-1 text-sm text-gray-500">Comienza agregando tu primer servidor IRC.</p>
-          <div class="mt-6">
-            <Link
-              :href="route('irc-servers.create')"
-              class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg
-                class="-ml-1 mr-2 h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              Agregar Servidor
-            </Link>
-          </div>
-        </div>
-
-        <div v-else class="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul role="list" class="divide-y divide-gray-200">
-            <li v-for="server in servers" :key="server.id" class="px-6 py-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="flex-shrink-0">
-                    <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                      <svg
-                        class="h-6 w-6 text-white"
+            <!-- Estado vacío -->
+            <div v-if="servers.length === 0" class="flex flex-col items-center justify-center py-12">
+                <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <svg
+                        class="w-8 h-8 text-muted-foreground"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                      >
+                        aria-hidden="true"
+                    >
                         <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ server.name || server.host }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ server.host }}:{{ server.port }}
-                    </div>
-                  </div>
+                    </svg>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <Link
-                    :href="route('irc-chat.show', server.id)"
-                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    Conectar
-                  </Link>
-                  <Link
-                    :href="route('irc-servers.edit', server.id)"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Editar
-                  </Link>
-                  <button
-                    @click="deleteServer(server)"
-                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </li>
-          </ul>
+                <h3 class="text-lg font-semibold text-foreground mb-2">No hay servidores IRC</h3>
+                <p class="text-muted-foreground mb-6">Comienza agregando tu primer servidor IRC.</p>
+                <Button as-child>
+                    <Link :href="route('irc-servers.create')">
+                        <svg
+                            class="w-4 h-4 mr-2"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
+                        Agregar Servidor
+                    </Link>
+                </Button>
+            </div>
+
+            <!-- Lista de servidores -->
+            <div v-else class="space-y-4">
+                <Card 
+                    v-for="server in servers" 
+                    :key="server.id" 
+                    class="p-6"
+                >
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                <svg
+                                    class="w-6 h-6 text-primary"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">
+                                    {{ server.name || server.host }}
+                                </h3>
+                                <p class="text-sm text-muted-foreground">
+                                    {{ server.host }}:{{ server.port }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <Button
+                                variant="default"
+                                size="sm"
+                                as-child
+                            >
+                                <Link :href="route('irc-chat.show', server.id)">
+                                    Conectar
+                                </Link>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                as-child
+                            >
+                                <Link :href="route('irc-servers.edit', server.id)">
+                                    Editar
+                                </Link>
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                @click="deleteServer(server)"
+                            >
+                                Eliminar
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            </div>
         </div>
-      </div>
-    </main>
-  </div>
+    </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
-
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import axios from 'axios'
 interface IRCServer {
   id: number
   name?: string
@@ -137,9 +144,8 @@ onMounted(async () => {
 
 async function loadServers() {
   try {
-    const response = await fetch('/irc/api/servers')
-    const data = await response.json()
-    servers.value = data
+    const response = await axios.get(route('irc-servers.list'))
+    servers.value = response.data
   } catch (error) {
     console.error('Error loading servers:', error)
   }
