@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 class IrcService
 {
     protected $server;
+    protected $host;
     protected $port;
     protected $nickname;
     protected $socket;
@@ -17,6 +18,7 @@ class IrcService
     public function __construct(string $server, int $port, string $nickname = 'PHPBot')
     {
         $this->server = $server;
+        $this->host = $server;
         $this->port = $port;
         $this->nickname = $nickname;
     }
@@ -290,7 +292,7 @@ class IrcService
      */
     public function listen(callable $onMessage)
     {
-        $workerKey = "irc_worker_active_{$this->server}_{$this->nickname}";
+        $workerKey = "irc_worker_active_{$this->host}_{$this->nickname}";
         while ($this->isConnected()) {
             // Si la clave en cache desaparece, desconectar y terminar
             if (!\Illuminate\Support\Facades\Cache::has($workerKey)) {

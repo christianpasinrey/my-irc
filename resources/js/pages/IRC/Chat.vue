@@ -324,6 +324,9 @@ onMounted(() => {
   // Auto-conectar si ya tenemos los datos
   if (connectionForm.nickname && connectionForm.channel) {
     connect()
+    // Actualizar usuarios y mensajes la primera vez si ya hay datos
+    loadChannelUsers();
+    loadMessages();
   }
 
   // Verificar estado de conexión
@@ -341,6 +344,13 @@ onMounted(() => {
         nextTick(() => scrollToBottom());
       });
   }
+
+  // Polling para actualizar usuarios cada 5 segundos
+  messagePolling = setInterval(() => {
+    if (isConnected.value) {
+      loadChannelUsers();
+    }
+  }, 5000);
 })
 
 onBeforeUnmount(() => {
