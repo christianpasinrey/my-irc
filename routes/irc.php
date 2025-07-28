@@ -22,6 +22,14 @@ Route::prefix('irc')->middleware(['auth'])->group(function () {
     Route::get('/chat/{server}/messages', [IRCChatController::class, 'getMessages'])->name('irc-chat.messages');
     Route::post('/chat/{server}/join-channel', [IRCChatController::class, 'joinChannel'])->name('irc-chat.join-channel');
     Route::post('/chat/{server}/leave-channel', [IRCChatController::class, 'leaveChannel'])->name('irc-chat.leave-channel');
+
+    // Nuevas rutas para funcionalidad extendida
+    Route::get('/chat/{server}/channel-list', [IRCChatController::class, 'getChannelList'])->name('irc-chat.channel-list');
+    Route::get('/chat/{server}/channel-users', [IRCChatController::class, 'getChannelUsers'])->name('irc-chat.channel-users');
+    Route::get('/chat/{server}/status', [IRCChatController::class, 'getConnectionStatus'])->name('irc-chat.status');
+
+    // Ruta para desconectar todas las conexiones del usuario
+    Route::post('/chat/disconnect-all', [IRCChatController::class, 'disconnectAll'])->name('irc-chat.disconnect-all');
 });
 
 // API para obtener lista de servidores (fuera del middleware de auth para AJAX)

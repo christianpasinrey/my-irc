@@ -8,55 +8,73 @@ use Inertia\Inertia;
 use App\Models\IRCServer;
 use App\Models\IRCMessage;
 use App\Services\IrcService;
+use App\Services\IrcConnectionManager;
 
 class IRCChatController extends Controller
 {
-    protected $activeConnections = [];
-
     public function show(IRCServer $server)
     {
+        $user = Auth::user();
+        $connectionInfo = IrcConnectionManager::getConnectionInfo($server->id, $user->id);
+
         return Inertia::render('IRC/Chat', [
             'server' => $server,
-            'channels' => ['#general', '#random', '#help'], // Canales por defecto
-            'nickname' => Auth::user()->name ?? 'Usuario'
+            'channels' => $connectionInfo ? [] : ['#general', '#random', '#help'], // Canales por defecto cuando no hay conexión
+            'nickname' => $user->name ?? 'Usuario',
+            'isConnected' => IrcConnectionManager::isConnected($server->id, $user->id),
+            'connectionInfo' => $connectionInfo
         ]);
     }
 
     public function connect(Request $request, IRCServer $server)
     {
         $request->validate([
-            'nickname' => 'required|string|max:50',
+            'nickname' => 'required|string|max:50|alpha_dash',
             'channel' => 'required|string|max:50',
         ]);
 
+        $user = Auth::user();
+
         try {
-            $ircService = IRCServer::connect(
+            // Lanzar el worker IRC en background usando el job
+            \App\Jobs\StartIRCWorker::dispatch(
+                $server->id,
                 $server->host,
                 $server->port,
                 $request->nickname,
                 $request->channel
             );
+            // Crear nueva conexión
+            $ircService = IrcConnectionManager::createConnection(
+                $server->id,
+                $user->id,
+                $server->host,
+                $server->port,
+                $request->nickname
+            );
 
-            if ($ircService) {
-                // Almacenar la conexión en sesión o cache
-                session(['irc_connection_' . $server->id => [
-                    'nickname' => $request->nickname,
-                    'channel' => $request->channel,
-                    'connected' => true
-                ]]);
-
+            if (!$ircService) {
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Conectado exitosamente al servidor IRC',
-                    'server' => $server->name,
-                    'channel' => $request->channel
-                ]);
+                    'success' => false,
+                    'message' => 'No se pudo conectar al servidor IRC. Verifique que el servidor esté disponible.'
+                ], 500);
+            }
+
+            // Unirse al canal inicial
+            if (!$ircService->joinChannel($request->channel)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Conectado al servidor pero no se pudo unir al canal.'
+                ], 500);
             }
 
             return response()->json([
-                'success' => false,
-                'message' => 'No se pudo conectar al servidor IRC'
-            ], 500);
+                'success' => true,
+                'message' => 'Conectado exitosamente al servidor IRC',
+                'server' => $server->name,
+                'channel' => $request->channel,
+                'nickname' => $ircService->getNickname()
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -68,8 +86,10 @@ class IRCChatController extends Controller
 
     public function disconnect(Request $request, IRCServer $server)
     {
-        // Remover la conexión de la sesión
-        session()->forget('irc_connection_' . $server->id);
+        $user = Auth::user();
+        // Lanzar el job para detener el worker IRC (con host)
+        \App\Jobs\StopIRCWorker::dispatch($request->nickname, $request->channel, $server->host);
+        IrcConnectionManager::closeConnection($server->id, $user->id);
 
         return response()->json([
             'success' => true,
@@ -84,9 +104,10 @@ class IRCChatController extends Controller
             'channel' => 'required|string|max:50',
         ]);
 
-        $connection = session('irc_connection_' . $server->id);
+        $user = Auth::user();
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
 
-        if (!$connection || !$connection['connected']) {
+        if (!$ircService) {
             return response()->json([
                 'success' => false,
                 'message' => 'No hay conexión activa con el servidor'
@@ -94,21 +115,31 @@ class IRCChatController extends Controller
         }
 
         try {
-            // Aquí integrarías con el servicio IRC real
-            // Por ahora, solo guardamos el mensaje en la base de datos
+            // Enviar mensaje al IRC real
+            if (!$ircService->sendMessage($request->channel, $request->message)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al enviar mensaje al servidor IRC'
+                ], 500);
+            }
+
+            // Guardar mensaje en la base de datos
             IRCMessage::create([
                 'server_id' => $server->id,
-                'nickname' => $connection['nickname'],
+                'nickname' => $ircService->getNickname(),
                 'message' => $request->message,
                 'channel' => $request->channel,
                 'timestamp' => now()
             ]);
 
+            // Actualizar actividad
+            IrcConnectionManager::updateActivity($server->id, $user->id);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Mensaje enviado',
                 'data' => [
-                    'nickname' => $connection['nickname'],
+                    'nickname' => $ircService->getNickname(),
                     'message' => $request->message,
                     'timestamp' => now()->toISOString()
                 ]
@@ -124,10 +155,35 @@ class IRCChatController extends Controller
 
     public function getMessages(Request $request, IRCServer $server)
     {
+        $user = Auth::user();
         $channel = $request->get('channel', '#general');
         $limit = $request->get('limit', 50);
 
-        $messages = IRCMessage::where('server_id', $server->id)
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
+        $liveMessages = [];
+
+        // Obtener mensajes en tiempo real del IRC si hay conexión activa
+        if ($ircService) {
+            $liveMessages = $ircService->readMessages();
+
+            // Guardar mensajes nuevos en la base de datos
+            foreach ($liveMessages as $message) {
+                if ($message['channel'] === $channel) {
+                    IRCMessage::firstOrCreate([
+                        'server_id' => $server->id,
+                        'nickname' => $message['nickname'],
+                        'message' => $message['message'],
+                        'channel' => $message['channel'],
+                        'timestamp' => $message['timestamp']
+                    ]);
+                }
+            }
+
+            IrcConnectionManager::updateActivity($server->id, $user->id);
+        }
+
+        // Obtener mensajes de la base de datos
+        $dbMessages = IRCMessage::where('server_id', $server->id)
             ->where('channel', $channel)
             ->orderBy('timestamp', 'desc')
             ->take($limit)
@@ -137,7 +193,8 @@ class IRCChatController extends Controller
 
         return response()->json([
             'success' => true,
-            'messages' => $messages
+            'messages' => $dbMessages,
+            'isConnected' => $ircService !== null
         ]);
     }
 
@@ -147,24 +204,42 @@ class IRCChatController extends Controller
             'channel' => 'required|string|max:50',
         ]);
 
-        $connection = session('irc_connection_' . $server->id);
+        $user = Auth::user();
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
 
-        if (!$connection || !$connection['connected']) {
+        if (!$ircService) {
             return response()->json([
                 'success' => false,
                 'message' => 'No hay conexión activa con el servidor'
             ], 400);
         }
 
-        // Actualizar el canal actual en la sesión
-        $connection['channel'] = $request->channel;
-        session(['irc_connection_' . $server->id => $connection]);
+        $channel = $request->channel;
+        if (!str_starts_with($channel, '#')) {
+            $channel = '#' . $channel;
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Unido al canal ' . $request->channel,
-            'channel' => $request->channel
-        ]);
+        try {
+            if ($ircService->joinChannel($channel)) {
+                IrcConnectionManager::updateActivity($server->id, $user->id);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Unido al canal ' . $channel,
+                    'channel' => $channel
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo unir al canal ' . $channel
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al unirse al canal: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function leaveChannel(Request $request, IRCServer $server)
@@ -173,9 +248,118 @@ class IRCChatController extends Controller
             'channel' => 'required|string|max:50',
         ]);
 
+        $user = Auth::user();
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
+
+        if (!$ircService) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay conexión activa con el servidor'
+            ], 400);
+        }
+
+        try {
+            if ($ircService->leaveChannel($request->channel)) {
+                IrcConnectionManager::updateActivity($server->id, $user->id);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Has salido del canal ' . $request->channel
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo salir del canal'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al salir del canal: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getChannelList(Request $request, IRCServer $server)
+    {
+        $user = Auth::user();
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
+
+        if (!$ircService) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay conexión activa con el servidor'
+            ], 400);
+        }
+
+        try {
+            $channels = $ircService->getChannelList();
+            IrcConnectionManager::updateActivity($server->id, $user->id);
+
+            return response()->json([
+                'success' => true,
+                'channels' => $channels
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener lista de canales: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getChannelUsers(Request $request, IRCServer $server)
+    {
+        $user = Auth::user();
+        $channel = $request->get('channel', '#general');
+        $ircService = IrcConnectionManager::getConnection($server->id, $user->id);
+
+        if (!$ircService) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay conexión activa con el servidor',
+                'users' => []
+            ]);
+        }
+
+        try {
+            $users = $ircService->getChannelUsers($channel);
+            IrcConnectionManager::updateActivity($server->id, $user->id);
+
+            return response()->json([
+                'success' => true,
+                'users' => $users
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener usuarios del canal: ' . $e->getMessage(),
+                'users' => []
+            ]);
+        }
+    }
+
+    public function getConnectionStatus(Request $request, IRCServer $server)
+    {
+        $user = Auth::user();
+        $isConnected = IrcConnectionManager::isConnected($server->id, $user->id);
+        $connectionInfo = IrcConnectionManager::getConnectionInfo($server->id, $user->id);
+
         return response()->json([
             'success' => true,
-            'message' => 'Has salido del canal ' . $request->channel
+            'isConnected' => $isConnected,
+            'connectionInfo' => $connectionInfo
+        ]);
+    }
+
+    // Desconectar todas las conexiones IRC activas del usuario
+    public function disconnectAll(Request $request)
+    {
+        $user = Auth::user();
+        $count = \App\Services\IrcConnectionManager::disconnectAllForUser($user->id);
+        return response()->json([
+            'success' => true,
+            'message' => "Desconectadas $count conexiones IRC y workers para el usuario."
         ]);
     }
 }

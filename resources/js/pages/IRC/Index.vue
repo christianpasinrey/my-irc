@@ -4,7 +4,7 @@
             <!-- Header con título y botón agregar -->
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-foreground">Servidores IRC</h1>
-                <Button 
+                <Button
                     as-child
                 >
                     <Link :href="route('irc-servers.create')">
@@ -55,9 +55,9 @@
 
             <!-- Lista de servidores -->
             <div v-else class="space-y-4">
-                <Card 
-                    v-for="server in servers" 
-                    :key="server.id" 
+                <Card
+                    v-for="server in servers"
+                    :key="server.id"
                     class="p-6"
                 >
                     <div class="flex items-center justify-between">

@@ -4,8 +4,8 @@
             <!-- Header con título y botón volver -->
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-foreground">Editar Servidor IRC</h1>
-                <Button 
-                    variant="secondary" 
+                <Button
+                    variant="secondary"
                     as-child
                 >
                     <Link :href="route('irc-servers.index')">
@@ -71,8 +71,8 @@
                         </div>
 
                         <div class="flex items-center justify-between pt-4">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 type="button"
                                 as-child
                             >
