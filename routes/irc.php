@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\IRCServerController;
+use App\Http\Controllers\IRCChatController;
+
+// Rutas para gestión de servidores IRC
+Route::middleware(['auth'])->group(function () {
+    // Gestión de servidores IRC
+    Route::get('/servers', [IRCServerController::class, 'index'])->name('irc-servers.index');
+    Route::get('/servers/create', [IRCServerController::class, 'create'])->name('irc-servers.create');
+    Route::post('/servers', [IRCServerController::class, 'store'])->name('irc-servers.store');
+    Route::get('/servers/{id}/edit', [IRCServerController::class, 'edit'])->name('irc-servers.edit');
+    Route::put('/servers/{id}', [IRCServerController::class, 'update'])->name('irc-servers.update');
+    Route::delete('/servers/{id}', [IRCServerController::class, 'destroy'])->name('irc-servers.destroy');
+    
+    // API para obtener lista de servidores
+    Route::get('/api/servers', [IRCServerController::class, 'list'])->name('irc-servers.list');
+    
+    // Rutas para el chat IRC
+    Route::get('/chat/{server}', [IRCChatController::class, 'show'])->name('irc-chat.show');
+    Route::post('/chat/{server}/connect', [IRCChatController::class, 'connect'])->name('irc-chat.connect');
+    Route::post('/chat/{server}/disconnect', [IRCChatController::class, 'disconnect'])->name('irc-chat.disconnect');
+    Route::post('/chat/{server}/send', [IRCChatController::class, 'sendMessage'])->name('irc-chat.send');
+    Route::get('/chat/{server}/messages', [IRCChatController::class, 'getMessages'])->name('irc-chat.messages');
+    Route::post('/chat/{server}/join-channel', [IRCChatController::class, 'joinChannel'])->name('irc-chat.join-channel');
+    Route::post('/chat/{server}/leave-channel', [IRCChatController::class, 'leaveChannel'])->name('irc-chat.leave-channel');
+});
