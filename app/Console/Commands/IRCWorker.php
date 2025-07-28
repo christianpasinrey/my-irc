@@ -34,6 +34,14 @@ class IRCWorker extends Command
                 $chan = $matches[2];
                 $message = $matches[3];
                 event(new IRCMessageReceived($serverId, $chan, $nickname, $message, now()->toISOString()));
+                // Guardar mensaje en la base de datos
+                \App\Models\IRCMessage::create([
+                    'server_id' => $serverId,
+                    'nickname' => $nickname,
+                    'message' => $message,
+                    'channel' => $chan,
+                    'timestamp' => now()
+                ]);
                 $this->info("[$chan] <$nickname> $message");
             }
         });
